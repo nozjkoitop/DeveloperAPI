@@ -34,7 +34,7 @@ class ApiApplicationTests {
     @Order(1)
     public void testCreate() {
         Developer developer = new Developer();
-        developer.setName("Vasya");
+        developer.setUsername("Vasya");
         developer.setEmail("VasyaVasin@yandex.ru");
         developerRepository.save(developer);
         assertNotNull(developerRepository.findById(developer.getId()).get());
@@ -58,7 +58,7 @@ class ApiApplicationTests {
     @Order(4)
     public void testSearchByEmail() {
         developerRepository.findDeveloperByEmail("Nozjkoitop@mail.ru");
-        assertEquals("Misha", developerRepository.findById(1L).get().getName());
+        assertEquals("Misha", developerRepository.findById(1L).get().getUsername());
     }
 
 }

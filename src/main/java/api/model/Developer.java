@@ -9,6 +9,8 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import javax.persistence.*;
+import javax.validation.constraints.Size;
+import java.util.List;
 
 /**
  * @Author : NozjkoiTop
@@ -30,10 +32,26 @@ public class Developer {
     private long id;
 
     @ApiModelProperty("Name is ->")
-    @Column(name = "name")
-    private String name;
+    @Size(min = 3, max = 50, message = "Minimum username length: 3 characters")
+    @Column(name = "username")
+    private String username;
 
     @ApiModelProperty("Email is ->")
-    @Column(name = "email")
+    @Column(name = "email",unique = true)
     private String email;
+
+    @ApiModelProperty("Password set to ->")
+    @Size(min = 5, message = "Minimum password length: 5 characters")
+    private String password;
+
+    @ApiModelProperty("Issuer is ->")
+    @Column
+    private String issuer;
+
+    @ApiModelProperty("Subject is ->")
+    @Column
+    private String subject;
+
+    @ElementCollection(fetch = FetchType.EAGER)
+    List<Role> roles;
 }

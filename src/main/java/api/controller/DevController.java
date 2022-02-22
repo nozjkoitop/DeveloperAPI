@@ -1,16 +1,21 @@
 package api.controller;
 
 
-import api.exception.DeveloperNotFoundException;
+import api.dto.DeveloperDTO;
+import api.dto.DeveloperResponseDTO;
+import api.dto.LoginDTO;
+import api.dto.TokenDTO;
 import api.model.Developer;
-import api.repository.DeveloperRepository;
-import io.swagger.annotations.Api;
-import io.swagger.annotations.ApiOperation;
-import org.springframework.beans.factory.annotation.Autowired;
+import api.service.implementation.DeveloperService;
+import io.swagger.annotations.*;
+import lombok.RequiredArgsConstructor;
+import org.modelmapper.ModelMapper;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+
 
 /**
  * @Author : NozjkoiTop
@@ -19,48 +24,89 @@ import java.util.List;
 
 @CrossOrigin
 @RestController
-@RequestMapping("/api")
-@Api(description = "Api controller")
+@RequestMapping("/api/v1")
+@RequiredArgsConstructor
+@Api(tags = "developers")
 public class DevController {
 
-    @Autowired
-    private DeveloperRepository developerRepository;
+    private final DeveloperService developerService;
+    private final ModelMapper modelMapper;
+
+    @PostMapping("/auth/login")
+    @ApiOperation(value = "${DevController.login}")
+    @ApiResponses(value = {//
+            @ApiResponse(code = 400, message = "Something went wrong"), //
+            @ApiResponse(code = 422, message = "Invalid username/password supplied")})
+    public ResponseEntity login(@RequestBody LoginDTO loginDTO) {
+        return developerService.login(loginDTO);
+    }
+
+    @PostMapping("/auth/signup")
+    @ApiOperation(value = "${DevController.signup}")
+    @ApiResponses(value = {//
+            @ApiResponse(code = 400, message = "Something went wrong"), //
+            @ApiResponse(code = 401, message = "Unauthorized"),//
+            @ApiResponse(code = 403, message = "Access denied"), //
+            @ApiResponse(code = 422, message = "Username is already in use"),
+            @ApiResponse(code = 500, message = "Expired or invalid JWT token")})
+    public String signup(@ApiParam("Signup Developer") @RequestBody DeveloperDTO developer) {
+        return developerService.signup(modelMapper.map(developer, Developer.class));
+    }
 
     @GetMapping("/developers")
-    @ApiOperation("Getting all list of developers")
+    @PreAuthorize("hasRole('ROLE_USER')or hasRole ('ROLE_HR') or hasRole('ROLE_ADMIN')")
+    @ApiOperation(value = "${DevController.findAll}", authorizations = {@Authorization(value = "apiKey")})
+    @ApiResponses(value = {//
+            @ApiResponse(code = 400, message = "Something went wrong"), //
+            @ApiResponse(code = 401, message = "Unauthorized"),//
+            @ApiResponse(code = 403, message = "Access denied"),
+            @ApiResponse(code = 500, message = "Expired or invalid JWT token")}) //
     public List<Developer> getAllDevelopers() {
-        return developerRepository.findAll();
+        return developerService.findAll();
     }
 
-    @PostMapping("/developers")
-    @ApiOperation("Creation of a new developer")
-    public Developer createDeveloper(@RequestBody Developer developer) throws IllegalAccessException {
-        if (!(developerRepository.findDeveloperByEmail(developer.getEmail()).isEmpty())) {
-            throw new IllegalArgumentException("This EMail is already exists!!");
-        } else if (!(developer.getName().matches("^[a-zA-Z](.*)")) | developer.getName().length() >= 50 | developer.getName().length() < 2) {
-            throw new IllegalArgumentException("Incorrect name!!");
-        }
-
-        return developerRepository.save(developer);
+    @DeleteMapping(value = "/{username}")
+    @PreAuthorize("hasRole('ROLE_ADMIN')")
+    @ApiOperation(value = "${DevController.delete}", authorizations = {@Authorization(value = "apiKey")})
+    @ApiResponses(value = {//
+            @ApiResponse(code = 400, message = "Something went wrong"), //
+            @ApiResponse(code = 401, message = "Unauthorized"),//
+            @ApiResponse(code = 403, message = "Access denied"), //
+            @ApiResponse(code = 404, message = "The user doesn't exist"), //
+            @ApiResponse(code = 500, message = "Expired or invalid JWT token")})
+    public String delete(@ApiParam("Username") @PathVariable String username) {
+        developerService.delete(username);
+        return username;
     }
 
-    @GetMapping("/developers/{id}")
-    @ApiOperation("Getting developer by IP")
-    public ResponseEntity<Developer> getDeveloperById(@PathVariable long id) {
-        Developer developer = developerRepository.findById(id)
-                .orElseThrow(() -> new DeveloperNotFoundException("Developer not exist with id:" + id));
-        return ResponseEntity.ok(developer);
+    @GetMapping(value = "developers/{username}")
+    @PreAuthorize("hasRole('ROLE_USER')or hasRole ('ROLE_HR') or hasRole('ROLE_ADMIN')")
+    @ApiOperation(value = "${DevController.search}", response = DeveloperResponseDTO.class, authorizations = {@Authorization(value = "apiKey")})
+    @ApiResponses(value = {//
+            @ApiResponse(code = 400, message = "Something went wrong"), //
+            @ApiResponse(code = 401, message = "Unauthorized"),//
+            @ApiResponse(code = 403, message = "Access denied"), //
+            @ApiResponse(code = 404, message = "The user doesn't exist"), //
+            @ApiResponse(code = 500, message = "Expired or invalid JWT token")})
+    public DeveloperResponseDTO search(@ApiParam("Username") @PathVariable String username) {
+        return modelMapper.map(developerService.search(username), DeveloperResponseDTO.class);
     }
 
-    @PutMapping("/developers/{id}")
+    @PostMapping(value = "developers/{id}")
+    @PreAuthorize("hasRole('ROLE_ADMIN')")
     @ApiOperation("Developer's modifying")
-    public ResponseEntity<Developer> updateDeveloper(@PathVariable long id, @RequestBody Developer developerDetails) {
-        Developer updateDeveloper = developerRepository.findById(id)
-                .orElseThrow(() -> new DeveloperNotFoundException("Developer not exist with id: " + id));
-        updateDeveloper.setName(developerDetails.getName());
-        updateDeveloper.setEmail(developerDetails.getEmail());
-        developerRepository.save(updateDeveloper);
-        return ResponseEntity.ok(updateDeveloper);
+    @ApiResponses(value = {//
+            @ApiResponse(code = 401, message = "Unauthorized"),//
+            @ApiResponse(code = 404, message = "The user doesn't exist"), //
+            @ApiResponse(code = 500, message = "Expired or invalid JWT token")})
+    public ResponseEntity<Developer> updateDeveloper(@PathVariable long id, @RequestBody DeveloperDTO developerDTO) {
+        return developerService.updateDeveloper(id, developerDTO);
     }
 
+    @PostMapping(value = "/builder-jwt")
+    @ApiOperation("JWT Token generation")
+    public String builderJWT(@RequestBody TokenDTO tokenDTO) {
+        return developerService.builderJWT(tokenDTO);
+    }
 }
+
