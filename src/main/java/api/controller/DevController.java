@@ -1,12 +1,11 @@
 package api.controller;
 
 
-import api.dto.DeveloperDTO;
+import api.dto.DevDataDTO;
 import api.dto.DeveloperResponseDTO;
 import api.dto.LoginDTO;
-import api.dto.TokenDTO;
 import api.model.Developer;
-import api.service.implementation.DeveloperService;
+import api.service.DeveloperService;
 import io.swagger.annotations.*;
 import lombok.RequiredArgsConstructor;
 import org.modelmapper.ModelMapper;
@@ -41,21 +40,17 @@ public class DevController {
         return developerService.login(loginDTO);
     }
 
-    @PostMapping("/auth/signup")
-    @ApiOperation(value = "${DevController.signup}")
+    @PostMapping("/auth/builderJWT")
+    @ApiOperation(value = "${JWTTokenGeneration(signup)}")
     @ApiResponses(value = {//
-            @ApiResponse(code = 400, message = "Something went wrong"), //
-            @ApiResponse(code = 401, message = "Unauthorized"),//
-            @ApiResponse(code = 403, message = "Access denied"), //
-            @ApiResponse(code = 422, message = "Username is already in use"),
-            @ApiResponse(code = 500, message = "Expired or invalid JWT token")})
-    public String signup(@ApiParam("Signup Developer") @RequestBody DeveloperDTO developer) {
+            @ApiResponse(code = 400, message = "Something went wrong")})
+    public String signup(@ApiParam("Signup Developer") @RequestBody Developer developer) {
         return developerService.signup(modelMapper.map(developer, Developer.class));
     }
 
     @GetMapping("/developers")
     @PreAuthorize("hasRole('ROLE_USER')or hasRole ('ROLE_HR') or hasRole('ROLE_ADMIN')")
-    @ApiOperation(value = "${DevController.findAll}", authorizations = {@Authorization(value = "apiKey")})
+    @ApiOperation(value = "${DevController.findAll}", authorizations = {@Authorization(value = "Authorization")})
     @ApiResponses(value = {//
             @ApiResponse(code = 400, message = "Something went wrong"), //
             @ApiResponse(code = 401, message = "Unauthorized"),//
@@ -67,7 +62,7 @@ public class DevController {
 
     @DeleteMapping(value = "/{username}")
     @PreAuthorize("hasRole('ROLE_ADMIN')")
-    @ApiOperation(value = "${DevController.delete}", authorizations = {@Authorization(value = "apiKey")})
+    @ApiOperation(value = "${DevController.delete}", authorizations = {@Authorization(value = "Authorization")})
     @ApiResponses(value = {//
             @ApiResponse(code = 400, message = "Something went wrong"), //
             @ApiResponse(code = 401, message = "Unauthorized"),//
@@ -81,7 +76,7 @@ public class DevController {
 
     @GetMapping(value = "developers/{username}")
     @PreAuthorize("hasRole('ROLE_USER')or hasRole ('ROLE_HR') or hasRole('ROLE_ADMIN')")
-    @ApiOperation(value = "${DevController.search}", response = DeveloperResponseDTO.class, authorizations = {@Authorization(value = "apiKey")})
+    @ApiOperation(value = "${DevController.search}", response = DeveloperResponseDTO.class, authorizations = {@Authorization(value = "Authorization")})
     @ApiResponses(value = {//
             @ApiResponse(code = 400, message = "Something went wrong"), //
             @ApiResponse(code = 401, message = "Unauthorized"),//
@@ -94,19 +89,14 @@ public class DevController {
 
     @PostMapping(value = "developers/{id}")
     @PreAuthorize("hasRole('ROLE_ADMIN')")
-    @ApiOperation("Developer's modifying")
+    @ApiOperation(value = "{$Developer's modifying}", authorizations = {@Authorization(value = "Authorization")})
     @ApiResponses(value = {//
             @ApiResponse(code = 401, message = "Unauthorized"),//
             @ApiResponse(code = 404, message = "The user doesn't exist"), //
             @ApiResponse(code = 500, message = "Expired or invalid JWT token")})
-    public ResponseEntity<Developer> updateDeveloper(@PathVariable long id, @RequestBody DeveloperDTO developerDTO) {
-        return developerService.updateDeveloper(id, developerDTO);
+    public ResponseEntity<Developer> updateDeveloper(@PathVariable long id, @RequestBody DevDataDTO devDataDTO) {
+        return developerService.updateDeveloper(id, devDataDTO);
     }
 
-    @PostMapping(value = "/builder-jwt")
-    @ApiOperation("JWT Token generation")
-    public String builderJWT(@RequestBody TokenDTO tokenDTO) {
-        return developerService.builderJWT(tokenDTO);
-    }
 }
 
